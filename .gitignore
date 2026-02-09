@@ -1,0 +1,51 @@
+# IDE specific files
+.vscode/
+.idea/
+
+# Database
+*.db
+migrations/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Chrome extension
+build/
+dist/
+*.crx
+*.pem
+*.key
+*.cert
+
+# Local development
+settings.toml
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py[cod]
+*$py.class
+__pycache__/
+
+# Distribution / packaging
+.Python
+build/
+target/
+dist/

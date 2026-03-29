@@ -1,13 +1,12 @@
 {
-    "manifest_version": 3,
-    "name": "Authentoire",
-    "version": "1.0",
-    "description": "A local-only TOTP code generator developed by Smartoire.",
-    "permissions": [
-        "storage"
-    ],
-    "action": {
-        "default_popup": "src/Authentoire.html",
-        "default_icon": "src/icons/A-Authentoire.png"
-    }
+  "manifest_version": 3,
+  "name": "Authentoire",
+  "version": "1.1",
+  "description": "A local-only TOTP code generator developed by Smartoire.",
+  "permissions": ["storage", "tabs"],
+  "host_permissions": ["https://*/*"],
+  "action": {
+    "default_popup": "src/Authentoire.html",
+    "default_icon": "src/icons/A-Authentoire.png"
+  }
 }

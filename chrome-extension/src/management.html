@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentoire Management</title>
+    <link rel="stylesheet" href="./css/management.css" />
+</head>
+<body>
+    <div class="management-container">
+        <div class="header">
+            <h1>Authentoire Management</h1>
+            <p>Manage your TOTP accounts</p>
+            <input type="text" id="search-input" placeholder="Search by title or username..." class="search-input">
+            <div class="header-actions">
+                <button id="export-btn" class="btn btn-secondary" title="Export encrypted data">
+                    <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                        <path d="M14,2H6A2,2 0 0,0 0,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V8H18M20,11H13V13H20M20,15H13V17H20"/>
+                    </svg>
+                    Export
+                </button>
+                <button id="import-btn" class="btn btn-secondary" title="Import encrypted data">
+                    <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                        <path d="M14,2H6A2,2 0 0,0 0,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V8H18M20,11H13V13H20M20,15H13V17H20"/>
+                    </svg>
+                    Import
+                </button>
+            </div>
+        </div>
+
+        <button class="add-new-btn" id="add-new-btn">+ Add New TOTP</button>
+
+        <div class="totp-list" id="totp-list"></div>
+    </div>
+
+    <!-- Add/Edit Dialog -->
+    <div class="dialog hidden" id="edit-dialog">
+        <div class="dialog-content">
+            <div class="dialog-header">
+                <h2 id="dialog-title">Add TOTP</h2>
+                <button class="close-btn" id="close-btn">&times;</button>
+            </div>
+            <form id="totp-form">
+                <div class="form-group">
+                    <label for="title">Title *</label>
+                    <input type="text" id="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username">
+                </div>
+                <div class="form-group">
+                    <label for="secret">Secret *</label>
+                    <input type="text" id="secret" required>
+                </div>
+                <div class="form-group">
+                    <label for="prefixes">URL Prefixes (one per line)</label>
+                    <textarea id="prefixes" placeholder="https://github.com&#10;https://gitlab.com"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="qr-btn" class="btn btn-secondary">
+                        <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                            <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2zM15 15h2v2h-2zM13 17h2v2h-2zM17 17h2v2h-2zM19 19h2v2h-2zM15 19h2v2h-2zM17 13h2v2h-2zM19 15h2v2h-2z"/>
+                        </svg> QR
+                    </button>
+                    <button type="button" id="cancel-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOTP Code Modal -->
+    <div class="dialog hidden" id="code-dialog">
+        <div class="code-display">
+            <div class="totp-entry" id="totp-entry">
+                <div class="totp-timer">
+                    <div class="timer-bar">
+                        <div class="timer-progress" id="code-timer-progress"></div>
+                    </div>
+                    <div class="timer-text" id="timer-text"></div>
+                    <button class="close-btn" id="close-code-btn">&times;</button>
+                </div>
+                <div class="totp-title" id="totp-title"></div>
+                <div class="totp-username" id="totp-username"></div>
+                <div class="totp-code" id="totp-code"></div>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="qr-file-input" accept="image/*" style="display: none;">
+
+    <script src="./js/utils/jsQR.js"></script>
+    <script src="./js/utils/totp.js"></script>
+    <script src="./js/utils/crypto.js"></script>
+    <script src="./js/management.js"></script>
+</body>
+</html>

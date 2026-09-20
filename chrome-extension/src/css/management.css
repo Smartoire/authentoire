@@ -46,6 +46,30 @@ body {
   gap: 10px;
   margin-top: 10px;
   justify-content: center;
+  align-items: center;
+}
+
+.debug-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border: 1px solid #6c757d;
+  border-radius: 4px;
+  background: #6c757d;
+  color: white;
+  transition: background 0.2s ease;
+}
+
+.debug-toggle:hover {
+  background: #5a6268;
+}
+
+.debug-toggle input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
 }
 
 .add-new-btn {
@@ -175,6 +199,16 @@ body {
   color: white;
 }
 
+.item-actions button.show-qr-btn {
+  color: #9b59b6;
+  border-color: #9b59b6;
+}
+
+.item-actions button.show-qr-btn:hover {
+  background: #9b59b6;
+  color: white;
+}
+
 .item-actions .icon {
   display: block;
 }
@@ -245,25 +279,16 @@ body {
   color: #999;
 }
 
-.dialog {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+dialog.dialog {
+  border: none;
+  padding: 0;
+  background: transparent;
+  max-width: none;
+  max-height: none;
+}
+
+dialog.dialog::backdrop {
   background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-}
-
-.dialog.hidden {
-  display: none !important;
-}
-
-.dialog:not(.hidden) {
-  display: flex !important;
 }
 
 .dialog-content {
@@ -360,6 +385,7 @@ body {
     transform: translateX(100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -371,6 +397,7 @@ body {
     transform: translateX(0);
     opacity: 1;
   }
+
   to {
     transform: translateX(100%);
     opacity: 0;
@@ -415,4 +442,29 @@ body {
   color: #666;
   padding: 4px;
   line-height: 1;
+}
+
+.qr-content {
+  max-width: 300px;
+  text-align: center;
+}
+
+.qr-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+#qr-canvas {
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  background: white;
+}
+
+.qr-instruction {
+  font-size: 13px;
+  color: #666;
+  margin: 0;
+  line-height: 1.4;
 }

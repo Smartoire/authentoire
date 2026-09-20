@@ -1,3 +1,4 @@
+import io
 import os
 import sys
 import time
@@ -5,9 +6,11 @@ import base64
 from PIL import Image
 from pyzbar import pyzbar
 import urllib.parse
-import toml
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 import qrcode
-import base64
 import migration_pb2
 
 try:
@@ -21,16 +24,13 @@ except ImportError:
 def load_config():
     """Load configuration from ../settings.toml"""
     config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'settings.toml')
+    if not os.path.exists(config_path):
+        return {}
     try:
-        if os.path.exists(config_path):
-            return toml.load(config_path)
-        else:
-            print(f"Warning: Configuration file not found at {config_path}")
-            print("Using default settings")
-            return {}
+        with open(config_path, 'rb') as f:
+            return tomllib.load(f)
     except Exception as e:
         print(f"Error loading configuration: {e}")
-        print("Using default settings")
         return {}
 
 # Global configuration
@@ -167,30 +167,18 @@ def generate_qr_code(otp_entry):
         # Create otpauth URL
         otpauth_url = f"otpauth://totp/{otp_entry['issuer']}:{otp_entry['name']}?secret={otp_entry['secret']}&issuer={otp_entry['issuer']}&algorithm={otp_entry['algorithm']}&digits={otp_entry['digits']}"
         
-        # Generate QR code
         qr = qrcode.QRCode(
-            version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
             box_size=1,
             border=1,
         )
         qr.add_data(otpauth_url)
         qr.make(fit=True)
-        
-        # Create ASCII art using the built-in method
-        # Use terminal module if available, otherwise simple text
-        try:
-            qr_ascii = qr.get_matrix()
-            ascii_qr = ""
-            for row in qr_ascii:
-                for cell in row:
-                    ascii_qr += "██" if cell else "  "
-                ascii_qr += "\n"
-            return ascii_qr
-        except:
-            # Fallback to simple text representation
-            return f"QR Code for {otp_entry['issuer']}:\n{otpauth_url}"
-        
+
+        buf = io.StringIO()
+        qr.print_ascii(out=buf, invert=True)
+        return buf.getvalue()
+
     except Exception as e:
         return f"Error generating QR code: {e}"
 
@@ -204,10 +192,6 @@ def generate_totp_code(otp_entry):
         return totp.now()
     except Exception as e:
         return f"Error: {e}"
-
-def get_time_remaining():
-    """Get seconds remaining until next TOTP refresh"""
-    return 30 - (int(time.time()) % 30)
 
 def display_code_with_countdown(otp_entry):
     """Display TOTP code with countdown timer and QR code"""
@@ -364,36 +348,20 @@ def main():
         print("Debug mode enabled")
         print(f"Configuration loaded: {bool(CONFIG)}")
     
-    if len(sys.argv) < 2:
-        print("Usage: python authentoire.py <qr_image_path>")
+    args = [a for a in sys.argv[1:] if a != '--interactive']
+    if not args:
+        print("Usage: python authentoire.py [--interactive] <qr_image_path>")
         sys.exit(1)
-    
-    if sys.argv[1] == '--interactive':
-        # Interactive mode
-        if len(sys.argv) < 3:
-            print("Error: Interactive mode requires a file path")
-            print("Usage: python authentoire.py --interactive <qr_image_path>")
-            sys.exit(1)
-        
-        file_path = sys.argv[2]
-        if not os.path.exists(file_path):
-            print(f"Error: File '{file_path}' not found")
-            sys.exit(1)
-        
-        interactive_mode(file_path)
-        return
-    else:
-        # Default to interactive mode
-        file_path = sys.argv[1]
-        if not os.path.exists(file_path):
-            print(f"Error: File '{file_path}' not found")
-            sys.exit(1)
-        
-        if debug_enabled:
-            print(f"Processing file: {file_path}")
-        
-        interactive_mode(file_path)
-        return
+
+    file_path = args[0]
+    if not os.path.exists(file_path):
+        print(f"Error: File '{file_path}' not found")
+        sys.exit(1)
+
+    if debug_enabled:
+        print(f"Processing file: {file_path}")
+
+    interactive_mode(file_path)
 
 if __name__ == "__main__":
     main()

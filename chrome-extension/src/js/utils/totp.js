@@ -21,14 +21,10 @@ function base32toHex(base32) {
   return hex;
 }
 
-function leftpad(str, len, pad = "0") {
-  return str.length >= len ? str : pad.repeat(len - str.length) + str;
-}
-
 async function generateTOTP(secret, timeStep = 30) {
   const key = base32toHex(secret);
   const epoch = Math.floor(Date.now() / 1000);
-  const counter = leftpad(Math.floor(epoch / timeStep).toString(16), 16);
+  const counter = Math.floor(epoch / timeStep).toString(16).padStart(16, "0");
 
   const keyBytes = hexToBytes(key);
   const counterBytes = hexToBytes(counter);

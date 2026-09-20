@@ -936,6 +936,14 @@ cd rust-actix && cargo fmt
 4. Add tests if applicable
 5. Submit a pull request
 
+## ☁️ Sync Across Machines (Chrome Extension)
+
+The extension syncs secrets through `chrome.storage.sync` — Chrome replicates them to every machine where you're signed into the same account. The payload is encrypted with your PIN using AES-256-GCM (PBKDF2 key derivation), same scheme as export, so plaintext never leaves the machine.
+
+Setup: open the management page, click **Sync**, and enter a PIN. The PIN is remembered locally on each machine (enter it once per machine). After that, every add/edit/delete/import pushes automatically, and the popup/management page pulls remote changes on open. Last write wins.
+
+Note: the encrypted payload is limited to ~8KB (roughly 30-40 TOTP entries).
+
 ## 📄 License
 
 This project is developed and maintained by Smartoire. See LICENSE file for details.

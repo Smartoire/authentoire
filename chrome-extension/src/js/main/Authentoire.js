@@ -3,9 +3,25 @@ const manageBtn = document.getElementById("manage-btn");
 
 // Global elements
 let currentTabUrl = null;
+let debugMode = false;
+
+// Debug logging function
+function debugLog(...args) {
+  if (debugMode) {
+    console.log(...args);
+  }
+}
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("DOM Content Loaded - Initializing Authentoire");
+  debugLog("DOM Content Loaded - Initializing Authentoire");
+
+  // Load debug mode from storage
+  chrome.storage.local.get("debugMode", (data) => {
+    debugMode = data.debugMode || false;
+  });
+
+  // Pull Drive changes (no-op if sync isn't set up); renderCodes picks them up
+  pullSecrets();
 
   // Close extension when clicking outside
   document.addEventListener("click", (event) => {
@@ -23,25 +39,25 @@ document.addEventListener("DOMContentLoaded", () => {
     if (tabs[0] && tabs[0].url) {
       try {
         currentTabUrl = new URL(tabs[0].url);
-        console.log("Current URL:", currentTabUrl.origin);
+        debugLog("Current URL:", currentTabUrl.origin);
       } catch (err) {
-        console.error("Invalid URL:", tabs[0].url, err);
+        debugLog("Invalid URL:", tabs[0].url, err);
         currentTabUrl = null;
       }
     } else {
-      console.log("No active tab or URL available");
+      debugLog("No active tab or URL available");
       currentTabUrl = null;
     }
   });
 
-  console.log("Elements initialized:", {
+  debugLog("Elements initialized:", {
     codeList,
     manageBtn
   });
 
   // Handle management button
   manageBtn.onclick = () => {
-    console.log("Manage button clicked - opening in new tab");
+    debugLog("Manage button clicked - opening in new tab");
     chrome.tabs.create({
       url: chrome.runtime.getURL("src/management.html")
     });
@@ -77,12 +93,7 @@ async function renderCodes() {
       }
 
       return secret.prefixes.some((prefix) => {
-        try {
-          const prefixUrl = new URL(prefix);
-          return prefixUrl.origin === currentTabUrl.origin;
-        } catch {
-          return false;
-        }
+        return currentTabUrl.href.includes(prefix);
       });
     });
 
@@ -135,7 +146,7 @@ async function renderCodes() {
             }, 1000);
           })
           .catch((err) => {
-            console.error("Failed to copy:", err);
+            debugLog("Failed to copy:", err);
             showNotification("Failed to copy");
           });
       };

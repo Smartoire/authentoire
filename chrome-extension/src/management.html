@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Authentoire Management</title>
     <link rel="stylesheet" href="./css/management.css" />
 </head>
+
 <body>
     <div class="management-container">
         <div class="header">
@@ -13,17 +15,34 @@
             <p>Manage your TOTP accounts</p>
             <input type="text" id="search-input" placeholder="Search by title or username..." class="search-input">
             <div class="header-actions">
+                <label class="debug-toggle" title="Toggle debug mode">
+                    <input type="checkbox" id="debug-checkbox">
+                    <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                        <path
+                            d="M20 8h-2.81c-.45-.78-1.07-1.45-1.82-1.96L17 4.41 15.59 3l-2.17 2.17C12.96 5.06 12.49 5 12 5c-.49 0-.96.06-1.41.17L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v-2h4v2z" />
+                    </svg>
+                    Debug
+                </label>
                 <button id="export-btn" class="btn btn-secondary" title="Export encrypted data">
                     <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
-                        <path d="M14,2H6A2,2 0 0,0 0,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V8H18M20,11H13V13H20M20,15H13V17H20"/>
+                        <path
+                            d="M14,2H6A2,2 0 0,0 0,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V8H18M20,11H13V13H20M20,15H13V17H20" />
                     </svg>
                     Export
                 </button>
                 <button id="import-btn" class="btn btn-secondary" title="Import encrypted data">
                     <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
-                        <path d="M14,2H6A2,2 0 0,0 0,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V8H18M20,11H13V13H20M20,15H13V17H20"/>
+                        <path
+                            d="M14,2H6A2,2 0 0,0 0,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V8H18M20,11H13V13H20M20,15H13V17H20" />
                     </svg>
                     Import
+                </button>
+                <button id="sync-btn" class="btn btn-secondary" title="Sync encrypted secrets across your Chrome machines">
+                    <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                        <path
+                            d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z" />
+                    </svg>
+                    Sync
                 </button>
             </div>
         </div>
@@ -34,7 +53,7 @@
     </div>
 
     <!-- Add/Edit Dialog -->
-    <div class="dialog hidden" id="edit-dialog">
+    <dialog class="dialog" id="edit-dialog">
         <div class="dialog-content">
             <div class="dialog-header">
                 <h2 id="dialog-title">Add TOTP</h2>
@@ -54,13 +73,14 @@
                     <input type="text" id="secret" required>
                 </div>
                 <div class="form-group">
-                    <label for="prefixes">URL Prefixes (one per line)</label>
-                    <textarea id="prefixes" placeholder="https://github.com&#10;https://gitlab.com"></textarea>
+                    <label for="prefixes">URL Contains (one per line)</label>
+                    <textarea id="prefixes" placeholder="github.com&#10;gitlab.com"></textarea>
                 </div>
                 <div class="form-actions">
                     <button type="button" id="qr-btn" class="btn btn-secondary">
                         <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
-                            <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2zM15 15h2v2h-2zM13 17h2v2h-2zM17 17h2v2h-2zM19 19h2v2h-2zM15 19h2v2h-2zM17 13h2v2h-2zM19 15h2v2h-2z"/>
+                            <path
+                                d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2zM15 15h2v2h-2zM13 17h2v2h-2zM17 17h2v2h-2zM19 19h2v2h-2zM15 19h2v2h-2zM17 13h2v2h-2zM19 15h2v2h-2z" />
                         </svg> QR
                     </button>
                     <button type="button" id="cancel-btn" class="btn btn-secondary">Cancel</button>
@@ -68,10 +88,10 @@
                 </div>
             </form>
         </div>
-    </div>
+    </dialog>
 
     <!-- TOTP Code Modal -->
-    <div class="dialog hidden" id="code-dialog">
+    <dialog class="dialog" id="code-dialog">
         <div class="code-display">
             <div class="totp-entry" id="totp-entry">
                 <div class="totp-timer">
@@ -86,13 +106,29 @@
                 <div class="totp-code" id="totp-code"></div>
             </div>
         </div>
-    </div>
+    </dialog>
+
+    <!-- QR Code Display Modal -->
+    <dialog class="dialog" id="qr-dialog">
+        <div class="dialog-content qr-content">
+            <div class="dialog-header">
+                <h2>QR Code</h2>
+                <button class="close-btn" id="close-qr-btn">&times;</button>
+            </div>
+            <div class="qr-display">
+                <canvas id="qr-canvas"></canvas>
+                <p class="qr-instruction">Scan this QR code with your authenticator app</p>
+            </div>
+        </div>
+    </dialog>
 
     <input type="file" id="qr-file-input" accept="image/*" style="display: none;">
 
-    <script src="./js/utils/jsQR.js"></script>
+    <script src="./js/utils/qrcode.min.js"></script>
     <script src="./js/utils/totp.js"></script>
     <script src="./js/utils/crypto.js"></script>
+    <script src="./js/sync.js"></script>
     <script src="./js/management.js"></script>
 </body>
+
 </html>

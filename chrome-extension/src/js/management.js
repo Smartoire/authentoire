@@ -1,10 +1,38 @@
 let editingIndex = null;
 let currentTOTPItem = null;
 let codeTimerInterval = null;
+let debugMode = false;
+
+// Debug logging function
+function debugLog(...args) {
+  if (debugMode) {
+    console.log(...args);
+  }
+}
+
+function updateDebugCheckbox() {
+  const debugCheckbox = document.getElementById("debug-checkbox");
+  debugCheckbox.checked = debugMode;
+}
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("Management page loaded");
-  renderTOTPList();
+  debugLog("Management page loaded");
+
+  // Load debug mode from storage
+  chrome.storage.local.get("debugMode", (data) => {
+    debugMode = data.debugMode || false;
+    updateDebugCheckbox();
+  });
+
+  // Handle debug checkbox
+  document.getElementById("debug-checkbox").addEventListener("change", (event) => {
+    debugMode = event.target.checked;
+    chrome.storage.local.set({ debugMode });
+    debugLog("Debug mode toggled:", debugMode);
+  });
+
+  // Pull Drive changes before first render (no-op if sync isn't set up)
+  pullSecrets().finally(renderTOTPList);
 
   // Handle form submission
   document
@@ -27,6 +55,9 @@ document.addEventListener("DOMContentLoaded", () => {
     .getElementById("close-code-btn")
     .addEventListener("click", hideCodeDialog);
 
+  // Handle close QR button
+  document.getElementById("close-qr-btn").addEventListener("click", hideQRDialog);
+
   // Handle search input
   document
     .getElementById("search-input")
@@ -38,20 +69,20 @@ document.addEventListener("DOMContentLoaded", () => {
   // Handle import button
   document.getElementById("import-btn").addEventListener("click", handleImport);
 
-  // Handle ESC key to close modals
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      const editDialog = document.getElementById("edit-dialog");
-      const codeDialog = document.getElementById("code-dialog");
+  // Handle sync button
+  document.getElementById("sync-btn").addEventListener("click", handleSync);
 
-      if (!editDialog.classList.contains("hidden")) {
-        hideDialog();
-      }
-
-      if (!codeDialog.classList.contains("hidden")) {
-        hideCodeDialog();
-      }
+  // Dialog cleanup on close (covers Esc, close buttons, .close())
+  document.getElementById("edit-dialog").addEventListener("close", () => {
+    document.getElementById("totp-form").reset();
+    editingIndex = null;
+  });
+  document.getElementById("code-dialog").addEventListener("close", () => {
+    if (codeTimerInterval) {
+      clearInterval(codeTimerInterval);
+      codeTimerInterval = null;
     }
+    currentTOTPItem = null;
   });
 
   // Handle QR button
@@ -59,12 +90,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const qrFileInput = document.getElementById("qr-file-input");
 
   qrBtn.onclick = () => {
-    console.log("QR button clicked - triggering file upload");
+    debugLog("QR button clicked - triggering file upload");
     qrFileInput.click();
   };
 
   qrFileInput.onchange = (event) => {
-    console.log("File input changed:", event.target.files);
+    debugLog("File input changed:", event.target.files);
     handleFileUpload(event);
   };
 });
@@ -152,21 +183,37 @@ function renderTOTPList() {
 
       const duplicateBtn = document.createElement("button");
       duplicateBtn.innerHTML =
-        '<svg class="icon" viewBox="0 0 24 24" width="16" height="16"><path d="M16 1H4c-1.11 0-2 .89-2 2v14h2V3h12v14h2V3c0-1.11-.89-2-2zM8 7h8v2H8V7zm0 4h8v2H8v-2zm0 4h8v2H8v-2z"/></svg>';
+        '<svg class="icon" viewBox="0 0 24 24" width="16" height="16"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12v14h2V3c0-1.1-.9-2-2-2zm0 8H8V7h8v2zm0 4H8v-2h8v2zm0 4H8v-2h8v2z"/></svg>';
       duplicateBtn.title = "Duplicate";
       duplicateBtn.className = "duplicate-btn";
       duplicateBtn.onclick = () => duplicateTOTP(item);
+
+      const showQRBtn = document.createElement("button");
+      showQRBtn.innerHTML =
+        '<svg class="icon" viewBox="0 0 24 24" width="16" height="16"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM13 13h2v2h-2zM15 15h2v2h-2zM13 17h2v2h-2zM17 17h2v2h-2zM19 19h2v2h-2zM15 19h2v2h-2zM17 13h2v2h-2zM19 15h2v2h-2z"/></svg>';
+      showQRBtn.title = "Show QR Code";
+      showQRBtn.className = "show-qr-btn";
+      showQRBtn.onclick = () => showQRCode(item);
 
       const deleteBtn = document.createElement("button");
       deleteBtn.innerHTML =
         '<svg class="icon" viewBox="0 0 24 24" width="16" height="16"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
       deleteBtn.title = "Delete";
       deleteBtn.className = "delete-btn";
-      deleteBtn.onclick = () => deleteTOTP(index);
+      deleteBtn.onclick = () => {
+        const originalIndex = secrets.findIndex(
+          (secret) =>
+            secret.secret === item.secret &&
+            secret.title === item.title &&
+            secret.username === item.username
+        );
+        deleteTOTP(originalIndex);
+      };
 
       actionsDiv.appendChild(editBtn);
       actionsDiv.appendChild(showCodeBtn);
       actionsDiv.appendChild(duplicateBtn);
+      actionsDiv.appendChild(showQRBtn);
       actionsDiv.appendChild(deleteBtn);
 
       headerDiv.appendChild(titleDiv);
@@ -188,7 +235,7 @@ function renderTOTPList() {
       if (item.prefixes && item.prefixes.length > 0) {
         prefixesDiv.innerHTML = `${item.prefixes.join(", ")}`;
       } else {
-        prefixesDiv.innerHTML = "No prefixes (shows on all sites)";
+        prefixesDiv.innerHTML = "No URL filters (shows on all sites)";
       }
 
       itemDiv.appendChild(headerDiv);
@@ -203,7 +250,7 @@ function showAddDialog() {
   editingIndex = null;
   document.getElementById("dialog-title").textContent = "Add TOTP";
   document.getElementById("totp-form").reset();
-  document.getElementById("edit-dialog").classList.remove("hidden");
+  document.getElementById("edit-dialog").showModal();
 }
 
 function editTOTP(index) {
@@ -219,7 +266,7 @@ function editTOTP(index) {
     document.getElementById("prefixes").value = item.prefixes
       ? item.prefixes.join("\n")
       : "";
-    document.getElementById("edit-dialog").classList.remove("hidden");
+    document.getElementById("edit-dialog").showModal();
   });
 }
 
@@ -232,13 +279,11 @@ function duplicateTOTP(item) {
   document.getElementById("prefixes").value = item.prefixes
     ? item.prefixes.join("\n")
     : "";
-  document.getElementById("edit-dialog").classList.remove("hidden");
+  document.getElementById("edit-dialog").showModal();
 }
 
 function hideDialog() {
-  document.getElementById("edit-dialog").classList.add("hidden");
-  document.getElementById("totp-form").reset();
-  editingIndex = null;
+  document.getElementById("edit-dialog").close();
 }
 
 function handleFormSubmit(event) {
@@ -297,7 +342,7 @@ function handleFormSubmit(event) {
       showNotification("TOTP added successfully!");
     }
 
-    chrome.storage.local.set({ secrets }, () => {
+    saveSecrets(secrets, () => {
       hideDialog();
       renderTOTPList();
     });
@@ -313,7 +358,7 @@ function deleteTOTP(index) {
     chrome.storage.local.get("secrets", (data) => {
       const secrets = data.secrets || [];
       secrets.splice(index, 1);
-      chrome.storage.local.set({ secrets }, () => {
+      saveSecrets(secrets, () => {
         renderTOTPList();
         showNotification("TOTP deleted successfully!");
       });
@@ -326,7 +371,7 @@ function handleSearch() {
 }
 
 function handleExport() {
-  chrome.storage.local.get("secrets", (data) => {
+  chrome.storage.local.get("secrets", async (data) => {
     const secrets = data.secrets || [];
 
     if (secrets.length === 0) {
@@ -342,7 +387,7 @@ function handleExport() {
     }
 
     try {
-      const encryptedData = CryptoManager.encrypt(secrets, pin);
+      const encryptedData = await CryptoManager.encrypt(secrets, pin);
       const timestamp = new Date()
         .toISOString()
         .slice(0, 19)
@@ -366,9 +411,9 @@ function handleImport() {
   }
 
   importFromFile()
-    .then((encryptedData) => {
+    .then(async (encryptedData) => {
       try {
-        const secrets = CryptoManager.decrypt(encryptedData, pin);
+        const secrets = await CryptoManager.decrypt(encryptedData, pin);
 
         chrome.storage.local.get("secrets", (data) => {
           const existingSecrets = data.secrets || [];
@@ -405,7 +450,7 @@ function handleImport() {
 
           const mergedSecrets = [...existingSecrets, ...filteredNew];
 
-          chrome.storage.local.set({ secrets: mergedSecrets }, () => {
+          saveSecrets(mergedSecrets, () => {
             renderTOTPList();
             showNotification(
               `Imported ${filteredNew.length} new TOTP accounts!`
@@ -451,7 +496,7 @@ function showTOTPCode(item) {
   currentTOTPItem = item;
   document.getElementById("totp-title").textContent = item.title;
   document.getElementById("totp-username").textContent = item.username || "";
-  document.getElementById("code-dialog").classList.remove("hidden");
+  document.getElementById("code-dialog").showModal();
 
   // Make the TOTP entry clickable
   const totpEntry = document.getElementById("totp-code");
@@ -463,12 +508,7 @@ function showTOTPCode(item) {
 }
 
 function hideCodeDialog() {
-  document.getElementById("code-dialog").classList.add("hidden");
-  if (codeTimerInterval) {
-    clearInterval(codeTimerInterval);
-    codeTimerInterval = null;
-  }
-  currentTOTPItem = null;
+  document.getElementById("code-dialog").close();
 }
 
 async function updateTOTPCode() {
@@ -490,7 +530,7 @@ async function updateTOTPCode() {
       document.getElementById("totp-code").style.color = "#2e7d32";
     }
   } catch (err) {
-    console.error("Error generating TOTP code:", err);
+    debugLog("Error generating TOTP code:", err);
     document.getElementById("totp-code").textContent = "Error";
   }
 }
@@ -512,91 +552,48 @@ function copyTOTPCode() {
         }, 1000);
       })
       .catch((err) => {
-        console.error("Failed to copy:", err);
+        debugLog("Failed to copy:", err);
         showNotification("Failed to copy code");
       });
   }
 }
 
-function handleFileUpload(event) {
+async function handleFileUpload(event) {
   const file = event.target.files[0];
-  console.log("handleFileUpload called with file:", file?.name);
+  debugLog("handleFileUpload called with file:", file?.name);
+  event.target.value = "";
   if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    console.log("FileReader loaded - processing image");
-
-    const img = new Image();
-    img.onload = function () {
-      console.log("Image loaded - dimensions:", img.width, "x", img.height);
-
-      // Create a temporary canvas to process the image
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d", { willReadFrequently: true });
-      canvas.width = img.width;
-      canvas.height = img.height;
-      context.drawImage(img, 0, 0);
-
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-
-      try {
-        const result = decodeTOTPFromImage(imageData);
-        if (result) {
-          console.log("QR decoded successfully:", result);
-          handleQRResult(result);
-        } else {
-          console.log("No QR code found in image");
-          showNotification("No QR code found - try a clearer image");
-        }
-      } catch (err) {
-        console.error("Failed to read QR code:", err);
-        showNotification("Failed to read QR code");
-      }
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-function decodeTOTPFromImage(imageData) {
-  // Use jsQR library to decode QR code from image data
-  const code = jsQR(imageData.data, imageData.width, imageData.height, {
-    inversionAttempts: "dontInvert"
-  });
-
-  if (code) {
-    console.log("QR code decoded:", code.data);
-    return code.data;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const codes = await new BarcodeDetector({ formats: ["qr_code"] }).detect(
+      bitmap
+    );
+    if (codes.length) {
+      debugLog("QR decoded successfully:", codes[0].rawValue);
+      handleQRResult(codes[0].rawValue);
+    } else {
+      showNotification("No QR code found - try a clearer image");
+    }
+  } catch (err) {
+    debugLog("Failed to read QR code:", err);
+    showNotification("Failed to read QR code");
   }
-
-  // Try with inversion if first attempt fails
-  const invertedCode = jsQR(imageData.data, imageData.width, imageData.height, {
-    inversionAttempts: "onlyInvert"
-  });
-
-  if (invertedCode) {
-    console.log("QR code decoded with inversion:", invertedCode.data);
-    return invertedCode.data;
-  }
-
-  console.log("No QR code found in image");
-  return null;
 }
 
 function handleQRResult(uri) {
-  console.log("handleQRResult called with URI:", uri);
+  debugLog("handleQRResult called with URI:", uri);
 
   try {
     const url = new URL(uri);
-    console.log("Parsed URL:", url);
+    debugLog("Parsed URL:", url);
 
     if (url.protocol === "otpauth:" && url.pathname.startsWith("/totp/")) {
       const params = new URLSearchParams(url.search);
       const secret = params.get("secret");
       const label = url.pathname.substring(6); // Remove '/totp/'
 
-      console.log("Parsed TOTP data - Secret:", secret, "Label:", label);
+      debugLog("Parsed TOTP data - Secret:", secret, "Label:", label);
 
       if (secret) {
         document.getElementById("secret").value = secret;
@@ -612,15 +609,82 @@ function handleQRResult(uri) {
           }
         }
 
-        console.log("Form populated successfully");
+        debugLog("Form populated successfully");
         showNotification("QR code loaded successfully!");
       }
     } else {
-      console.log("Invalid URI format - not a TOTP URI");
+      debugLog("Invalid URI format - not a TOTP URI");
       showNotification("Invalid QR code format");
     }
   } catch (err) {
-    console.error("Error parsing QR result:", err);
+    debugLog("Error parsing QR result:", err);
     showNotification("Invalid QR code format");
+  }
+}
+
+function showQRCode(item) {
+  debugLog("showQRCode called for item:", item.title);
+
+  const label = item.username ? `${item.title}:${item.username}` : item.title;
+  const uri = `otpauth://totp/${encodeURIComponent(label)}?secret=${item.secret}&issuer=${encodeURIComponent(item.title)}`;
+
+  const qr = qrcode(0, "L");
+  qr.addData(uri);
+  qr.make();
+
+  const modules = qr.getModuleCount();
+  const cellSize = 6;
+  const margin = 4;
+  const canvas = document.getElementById("qr-canvas");
+  canvas.width = canvas.height = (modules + margin * 2) * cellSize;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#000000";
+  for (let row = 0; row < modules; row++) {
+    for (let col = 0; col < modules; col++) {
+      if (qr.isDark(row, col)) {
+        ctx.fillRect(
+          (col + margin) * cellSize,
+          (row + margin) * cellSize,
+          cellSize,
+          cellSize
+        );
+      }
+    }
+  }
+
+  document.getElementById("qr-dialog").showModal();
+}
+
+function hideQRDialog() {
+  document.getElementById("qr-dialog").close();
+}
+
+async function handleSync() {
+  const pin = prompt(
+    "Enter a PIN to encrypt your synced data (same format as export):"
+  );
+  if (!pin || pin.length < 4) {
+    if (pin !== null) alert("PIN must be at least 4 characters!");
+    return;
+  }
+  await chrome.storage.local.set({ syncPin: pin });
+  try {
+    const pulled = await pullSecrets();
+    if (pulled) {
+      renderTOTPList();
+      showNotification("Synced from your other machines!");
+    } else {
+      const data = await chrome.storage.local.get([
+        "secrets",
+        "secretsUpdatedAt",
+      ]);
+      await pushSecrets(data.secrets || [], data.secretsUpdatedAt || Date.now());
+      showNotification("Sync enabled — secrets pushed encrypted!");
+    }
+  } catch (e) {
+    debugLog("Sync failed:", e);
+    showNotification("Sync failed: " + (e.message || e));
   }
 }
